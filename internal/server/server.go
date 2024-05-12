@@ -2,26 +2,13 @@ package server
 
 import (
 	"net/http"
-	"time"
 
-	"github.com/Viet-ph/RSS-Feed-Aggregator/internal/middleware"
-	"github.com/Viet-ph/RSS-Feed-Aggregator/internal/service"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/middleware"
 )
 
-func NewServer(
-	userService *service.UserService,
-	feedService *service.FeedService,
-	postService *service.PostService,
-	feedFollowService *service.FeedFollowService,
-) http.Handler {
-	go service.StartScraping(feedService, postService, time.Minute)
+func NewServer() http.Handler {
 	mux := http.NewServeMux()
-	addRoutes(mux,
-		userService,
-		feedService,
-		postService,
-		feedFollowService,
-	)
+	addRoutes(mux)
 	var handler http.Handler = mux
 	handler = middleware.MiddlewareCors(handler)
 	return handler
