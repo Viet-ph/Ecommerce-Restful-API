@@ -60,6 +60,26 @@ func (q *Queries) DeleteUserById(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, email, password, location, created_at, updated_at FROM users 
+WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.Location,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserById = `-- name: GetUserById :one
 SELECT id, username, email, password, location, created_at, updated_at FROM users WHERE id = $1
 `
@@ -80,16 +100,28 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const updateUserPassword = `-- name: UpdateUserPassword :exec
-UPDATE users SET password = $2
+UPDATE users SET password = $2, created_at = $3
 WHERE id = $1
 `
 
 type UpdateUserPasswordParams struct {
-	ID       uuid.UUID
-	Password string
+	ID        uuid.UUID
+	Password  string
+	CreatedAt time.Time
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.Password)
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.Password, arg.CreatedAt)
 	return err
+}
+
+const userExists = `-- name: UserExists :one
+SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) AS exists
+`
+
+func (q *Queries) UserExists(ctx context.Context, email string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, userExists, email)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
