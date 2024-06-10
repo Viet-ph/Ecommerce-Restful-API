@@ -12,12 +12,12 @@ import (
 )
 
 type UserService struct {
-	Queries *db.Queries
+	queries *db.Queries
 }
 
 func NewUserService(q *db.Queries) *UserService {
 	return &UserService{
-		Queries: q,
+		queries: q,
 	}
 }
 
@@ -33,7 +33,7 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 		return model.User{}, fmt.Errorf("error creating new user credential")
 	}
 
-	user, err := userService.Queries.CreateUser(ctx, db.CreateUserParams{
+	user, err := userService.queries.CreateUser(ctx, db.CreateUserParams{
 		ID:        uuid.New(),
 		Username:  username,
 		Email:     email,
@@ -51,7 +51,7 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 }
 
 func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (model.User, error) {
-	user, err := userService.Queries.GetUserById(ctx, id)
+	user, err := userService.queries.GetUserById(ctx, id)
 	if err != nil {
 		return model.User{}, err
 	}
@@ -60,7 +60,7 @@ func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (
 }
 
 func (userService *UserService) GetUserByEmail(ctx context.Context, email string) (model.User, error) {
-	user, err := userService.Queries.GetUserByEmail(ctx, email)
+	user, err := userService.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		return model.User{}, err
 	}
@@ -69,7 +69,7 @@ func (userService *UserService) GetUserByEmail(ctx context.Context, email string
 }
 
 func (userService *UserService) DeleteUserById(ctx context.Context, id uuid.UUID) error {
-	err := userService.Queries.DeleteUserById(ctx, id)
+	err := userService.queries.DeleteUserById(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -78,10 +78,14 @@ func (userService *UserService) DeleteUserById(ctx context.Context, id uuid.UUID
 }
 
 func (userService *UserService) UpdateUserPassword(ctx context.Context, id uuid.UUID, newPassword string) error {
-	err := userService.Queries.UpdateUserPassword(ctx, db.UpdateUserPasswordParams{
-		ID:        id,
-		Password:  newPassword,
-		CreatedAt: time.Now().UTC(),
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("unable to hash new password, %v", err)
+	}
+
+	err = userService.queries.UpdateUserPassword(ctx, db.UpdateUserPasswordParams{
+		ID:       id,
+		Password: string(hashedPassword),
 	})
 	if err != nil {
 		return err
@@ -91,7 +95,7 @@ func (userService *UserService) UpdateUserPassword(ctx context.Context, id uuid.
 }
 
 func (userService *UserService) UserExists(ctx context.Context, email string) (bool, error) {
-	exist, err := userService.Queries.UserExists(ctx, email)
+	exist, err := userService.queries.UserExists(ctx, email)
 	if err != nil {
 		return false, err
 	}

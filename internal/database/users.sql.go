@@ -100,18 +100,17 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const updateUserPassword = `-- name: UpdateUserPassword :exec
-UPDATE users SET password = $2, created_at = $3
+UPDATE users SET password = $2, updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateUserPasswordParams struct {
-	ID        uuid.UUID
-	Password  string
-	CreatedAt time.Time
+	ID       uuid.UUID
+	Password string
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.Password, arg.CreatedAt)
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.Password)
 	return err
 }
 

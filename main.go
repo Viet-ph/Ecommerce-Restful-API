@@ -5,8 +5,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Viet-ph/Furniture-Store-Server/internal/handler"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/helper"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/server"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/service"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -19,12 +21,21 @@ func main() {
 		log.Fatal("Port is not found in the environment")
 	}
 
-	_, err := helper.ConnectDatabase()
+	queries, err := helper.ConnectDatabase()
 	if err != nil {
 		log.Fatal("Error conenction to database.")
 	}
 
-	srv := server.NewServer()
+	userService := service.NewUserService(queries)
+	authService := service.NewAuthService(userService, queries)
+	userHandler := handler.NewUserHandler(userService)
+	authHandler := handler.NewAuthHandler(authService, userService)
+
+	srv := server.NewServer(
+		userService,
+		authHandler,
+		userHandler,
+	)
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: srv,

@@ -15,8 +15,8 @@ WHERE token = $1;
 
 -- name: RevokeToken :exec
 UPDATE refresh_tokens SET revoked = TRUE
-WHERE user_id = $1;
+WHERE token = $1;
 
 -- name: DeleteTokenFromDB :exec
-DELETE FROM refresh_tokens WHERE user_id = $1;
+DELETE FROM refresh_tokens WHERE token = $1;
 

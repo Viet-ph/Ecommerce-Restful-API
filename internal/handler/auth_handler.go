@@ -13,6 +13,13 @@ type AuthHandler struct {
 	*service.UserService
 }
 
+func NewAuthHandler(a *service.AuthService, u *service.UserService) *AuthHandler {
+	return &AuthHandler{
+		AuthService: a,
+		UserService: u,
+	}
+}
+
 func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	type request struct {
 		Email    string `json:"email"`
@@ -20,6 +27,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	}
 
 	type response struct {
+		Id           string `json:"id"`
 		Email        string `json:"email"`
 		Username     string `json:"username"`
 		Location     string `json:"location"`
@@ -42,11 +50,61 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 		}
 
 		helper.RespondWithJSON(w, http.StatusOK, response{
+			Id:           user.ID.String(),
 			Email:        user.Email,
 			Username:     user.Username,
 			Location:     user.Location,
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		})
+	}
+}
+
+func (a *AuthHandler) RefreshAccessToken() http.HandlerFunc {
+	type request struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	type response struct {
+		AccessToken string `json:"access_token"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := helper.Decode[request](r)
+		if err != nil {
+			log.Printf("Error decoding parameters: %s", err)
+			w.WriteHeader(500)
+			return
+		}
+
+		newAccessToken, err := a.AuthService.RefreshAccessToken(r.Context(), req.RefreshToken)
+		if err != nil {
+			helper.RespondWithError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		helper.RespondWithJSON(w, http.StatusAccepted, response{
+			AccessToken: newAccessToken,
+		})
+	}
+}
+
+func (a *AuthHandler) RevokeRefreshToken() http.HandlerFunc {
+	type request struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req, err := helper.Decode[request](r)
+		if err != nil {
+			log.Printf("Error decoding parameters: %s", err)
+			w.WriteHeader(500)
+			return
+		}
+
+		err = a.AuthService.RevokeRefreshToken(r.Context(), req.RefreshToken)
+		if err != nil {
+			helper.RespondWithError(w, http.StatusUnauthorized, "Error revoking token: "+err.Error())
+		}
 	}
 }

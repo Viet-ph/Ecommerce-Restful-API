@@ -13,11 +13,11 @@ import (
 )
 
 const deleteTokenFromDB = `-- name: DeleteTokenFromDB :exec
-DELETE FROM refresh_tokens WHERE user_id = $1
+DELETE FROM refresh_tokens WHERE token = $1
 `
 
-func (q *Queries) DeleteTokenFromDB(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteTokenFromDB, userID)
+func (q *Queries) DeleteTokenFromDB(ctx context.Context, token string) error {
+	_, err := q.db.ExecContext(ctx, deleteTokenFromDB, token)
 	return err
 }
 
@@ -63,11 +63,11 @@ func (q *Queries) GetValidTokenByUserId(ctx context.Context, userID uuid.UUID) (
 
 const revokeToken = `-- name: RevokeToken :exec
 UPDATE refresh_tokens SET revoked = TRUE
-WHERE user_id = $1
+WHERE token = $1
 `
 
-func (q *Queries) RevokeToken(ctx context.Context, userID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, revokeToken, userID)
+func (q *Queries) RevokeToken(ctx context.Context, token string) error {
+	_, err := q.db.ExecContext(ctx, revokeToken, token)
 	return err
 }
 

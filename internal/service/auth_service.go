@@ -18,8 +18,8 @@ import (
 )
 
 type AuthService struct {
-	*UserService
-	Queries *db.Queries
+	userService *UserService
+	queries     *db.Queries
 }
 
 const ACCESS_TOKEN_LIFETIME = 30 * time.Minute
@@ -27,13 +27,13 @@ const REFRESH_TOKEN_LIFETIME = 24 * 60 * time.Hour
 
 func NewAuthService(userSv *UserService, q *db.Queries) *AuthService {
 	return &AuthService{
-		UserService: userSv,
-		Queries:     q,
+		userService: userSv,
+		queries:     q,
 	}
 }
 
 func (a *AuthService) Login(context context.Context, email, password string) (user model.User, signedAccessToken, signedRefreshToken string, err error) {
-	user, err = a.GetUserByEmail(context, email)
+	user, err = a.userService.GetUserByEmail(context, email)
 	if err == sql.ErrNoRows {
 		return model.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
@@ -49,14 +49,14 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 		return model.User{}, "", "", err
 	}
 
-	dbRefreshToken, err := a.Queries.GetValidTokenByUserId(context, user.ID)
+	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, user.ID)
 	if err == sql.ErrNoRows {
 		signedRefreshToken, err = signRefreshToken(user.ID.String(), REFRESH_TOKEN_LIFETIME)
 		if err != nil {
 			return model.User{}, "", "", err
 		}
 
-		_, err = a.Queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
+		_, err = a.queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
 			ID:        uuid.New(),
 			UserID:    user.ID,
 			Token:     signedRefreshToken,
@@ -74,13 +74,13 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 }
 
 func (a *AuthService) RefreshAccessToken(context context.Context, refreshToken string) (string, error) {
-	dbRefreshToken, err := a.Queries.GetTokenDetail(context, refreshToken)
+	dbRefreshToken, err := a.queries.GetTokenDetail(context, refreshToken)
 	if err != nil {
-		return "", fmt.Errorf("refresh access token failed, error: %v", err)
+		return "", fmt.Errorf("error getting refresh token info in database, error: %v", err)
 	}
 
 	if valid, _ := isRefreshTokenValid(dbRefreshToken); !valid {
-		return "", fmt.Errorf("invalid efresh token: %v", err)
+		return "", fmt.Errorf("invalid refresh token: %v", err)
 	}
 
 	userId, err := ValidateTokenAndExtractId(dbRefreshToken.Token)
@@ -89,6 +89,14 @@ func (a *AuthService) RefreshAccessToken(context context.Context, refreshToken s
 	}
 
 	return signAccessToken(userId, ACCESS_TOKEN_LIFETIME)
+}
+
+func (a *AuthService) RevokeRefreshToken(context context.Context, refreshToken string) error {
+	if err := a.queries.RevokeToken(context, refreshToken); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ExtractTokenFromHeader(r *http.Request) string {
