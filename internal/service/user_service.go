@@ -50,22 +50,22 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 	return model.DbUsertoUser(&user), nil
 }
 
-func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (model.User, error) {
+func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (db.User, error) {
 	user, err := userService.queries.GetUserById(ctx, id)
 	if err != nil {
-		return model.User{}, err
+		return db.User{}, err
 	}
 
-	return model.DbUsertoUser(&user), nil
+	return user, nil
 }
 
-func (userService *UserService) GetUserByEmail(ctx context.Context, email string) (model.User, error) {
+func (userService *UserService) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
 	user, err := userService.queries.GetUserByEmail(ctx, email)
 	if err != nil {
-		return model.User{}, err
+		return db.User{}, err
 	}
 
-	return model.DbUsertoUser(&user), nil
+	return user, nil
 }
 
 func (userService *UserService) DeleteUserById(ctx context.Context, id uuid.UUID) error {

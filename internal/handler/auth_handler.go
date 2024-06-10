@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Viet-ph/Furniture-Store-Server/internal/helper"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/service"
 )
 
@@ -27,10 +28,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	}
 
 	type response struct {
-		Id           string `json:"id"`
-		Email        string `json:"email"`
-		Username     string `json:"username"`
-		Location     string `json:"location"`
+		model.User
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -50,10 +48,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 		}
 
 		helper.RespondWithJSON(w, http.StatusOK, response{
-			Id:           user.ID.String(),
-			Email:        user.Email,
-			Username:     user.Username,
-			Location:     user.Location,
+			User:         user,
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		})

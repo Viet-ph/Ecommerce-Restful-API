@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/helper"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/middleware"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
@@ -28,14 +29,6 @@ func (u *UserHandler) UserSignUp() http.HandlerFunc {
 		Username string `json:"username"`
 		Location string `json:"location"`
 	}
-
-	type response struct {
-		Id       string `json:"id"`
-		Email    string `json:"email"`
-		Username string `json:"username"`
-		Location string `json:"location"`
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		req, err := helper.Decode[request](r)
 		if err != nil {
@@ -50,39 +43,19 @@ func (u *UserHandler) UserSignUp() http.HandlerFunc {
 			return
 		}
 
-		helper.RespondWithJSON(w, http.StatusCreated, response{
-			Id:       user.ID.String(),
-			Email:    user.Email,
-			Username: user.Username,
-			Location: user.Location,
-		})
+		helper.RespondWithJSON(w, http.StatusCreated, user)
 	}
 }
 
 func (u *UserHandler) GetPersonalInfo() http.HandlerFunc {
-	type response struct {
-		Id        string `json:"id"`
-		Email     string `json:"email"`
-		Username  string `json:"username"`
-		Location  string `json:"location"`
-		CreatedAt string `json:"created_at"`
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, ok := r.Context().Value(middleware.ContextUserKey).(model.User)
+		user, ok := r.Context().Value(middleware.ContextUserKey).(db.User)
 		if !ok {
 			helper.RespondWithError(w, http.StatusInternalServerError, "Context value is not User type")
 			return
 		}
 
-		helper.RespondWithJSON(w, http.StatusOK,
-			response{
-				Id:        user.ID.String(),
-				Email:     user.Email,
-				Username:  user.Username,
-				Location:  user.Location,
-				CreatedAt: user.CreatedAt.String(),
-			},
-		)
+		helper.RespondWithJSON(w, http.StatusOK, model.DbUsertoUser(&user))
 	}
 }
 
@@ -93,7 +66,7 @@ func (u *UserHandler) ChangePassword() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		user, ok := r.Context().Value(middleware.ContextUserKey).(model.User)
+		user, ok := r.Context().Value(middleware.ContextUserKey).(db.User)
 		if !ok {
 			helper.RespondWithError(w, http.StatusInternalServerError, "Context value is not User type")
 			return

@@ -33,14 +33,14 @@ func NewAuthService(userSv *UserService, q *db.Queries) *AuthService {
 }
 
 func (a *AuthService) Login(context context.Context, email, password string) (user model.User, signedAccessToken, signedRefreshToken string, err error) {
-	user, err = a.userService.GetUserByEmail(context, email)
+	dbUser, err := a.userService.GetUserByEmail(context, email)
 	if err == sql.ErrNoRows {
 		return model.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
 		return model.User{}, "", "", err
 	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)); err != nil {
 		return model.User{}, "", "", errors.New("wrong password")
 	}
 
@@ -70,7 +70,7 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 		signedRefreshToken = dbRefreshToken.Token
 	}
 
-	return user, signedAccessToken, signedRefreshToken, nil
+	return model.DbUsertoUser(&dbUser), signedAccessToken, signedRefreshToken, nil
 }
 
 func (a *AuthService) RefreshAccessToken(context context.Context, refreshToken string) (string, error) {
