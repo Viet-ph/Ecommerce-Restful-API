@@ -18,7 +18,11 @@ func NewMiddlewareAuth(userService *service.UserService) func(http.Handler) http
 	//By doing this, will clean up the middleware function arguments and create closure to outter deps.
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			tokenString := service.ExtractTokenFromHeader(r)
+			tokenString, err := service.ExtractTokenFromHeader(r)
+			if err != nil {
+				helper.RespondWithError(w, http.StatusUnauthorized, "Cannot get token from header: "+err.Error())
+			}
+
 			userId, err := service.ValidateTokenAndExtractId(tokenString)
 			if err != nil {
 				helper.RespondWithError(w, http.StatusUnauthorized, "Unauthorized Access: "+err.Error())

@@ -34,6 +34,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Print("Login endpoint hit")
 		req, err := helper.Decode[request](r)
 		if err != nil {
 			log.Printf("Error decoding parameters: %s", err)
@@ -56,23 +57,12 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 }
 
 func (a *AuthHandler) RefreshAccessToken() http.HandlerFunc {
-	type request struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-
 	type response struct {
 		AccessToken string `json:"access_token"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := helper.Decode[request](r)
-		if err != nil {
-			log.Printf("Error decoding parameters: %s", err)
-			w.WriteHeader(500)
-			return
-		}
-
-		newAccessToken, err := a.AuthService.RefreshAccessToken(r.Context(), req.RefreshToken)
+		newAccessToken, err := a.AuthService.RefreshAccessToken(r.Context(), r)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return

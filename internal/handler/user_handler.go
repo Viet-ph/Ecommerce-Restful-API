@@ -91,6 +91,6 @@ func (u *UserHandler) ChangePassword() http.HandlerFunc {
 			return
 		}
 
-		helper.RespondWithJSON(w, http.StatusOK, struct{}{})
+		helper.RespondWithJSON(w, http.StatusOK, "Password change successfully!")
 	}
 }

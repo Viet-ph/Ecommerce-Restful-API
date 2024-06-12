@@ -31,8 +31,8 @@ func NewAuthService(userSv *UserService, q *db.Queries) *AuthService {
 	}
 }
 
-func (a *AuthService) Login(context context.Context, email, password string) (user db.User, signedAccessToken, signedRefreshToken string, err error) {
-	dbUser, err := a.userService.GetUserByEmail(context, email)
+func (a *AuthService) Login(context context.Context, email, password string) (dbUser db.User, signedAccessToken, signedRefreshToken string, err error) {
+	dbUser, err = a.userService.GetUserByEmail(context, email)
 	if err == sql.ErrNoRows {
 		return db.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
@@ -43,21 +43,21 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 		return db.User{}, "", "", errors.New("wrong password")
 	}
 
-	signedAccessToken, err = signAccessToken(user.ID.String(), ACCESS_TOKEN_LIFETIME)
+	signedAccessToken, err = signAccessToken(dbUser.ID.String(), ACCESS_TOKEN_LIFETIME)
 	if err != nil {
 		return db.User{}, "", "", err
 	}
 
-	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, user.ID)
+	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, dbUser.ID)
 	if err == sql.ErrNoRows {
-		signedRefreshToken, err = signRefreshToken(user.ID.String(), REFRESH_TOKEN_LIFETIME)
+		signedRefreshToken, err = signRefreshToken(dbUser.ID.String(), REFRESH_TOKEN_LIFETIME)
 		if err != nil {
 			return db.User{}, "", "", err
 		}
 
 		_, err = a.queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
 			ID:        uuid.New(),
-			UserID:    user.ID,
+			UserID:    dbUser.ID,
 			Token:     signedRefreshToken,
 			ExpiresAt: time.Now().Add(REFRESH_TOKEN_LIFETIME),
 			CreatedAt: time.Now().UTC(),
@@ -72,7 +72,12 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 	return dbUser, signedAccessToken, signedRefreshToken, nil
 }
 
-func (a *AuthService) RefreshAccessToken(context context.Context, refreshToken string) (string, error) {
+func (a *AuthService) RefreshAccessToken(context context.Context, r *http.Request) (string, error) {
+	refreshToken, err := ExtractTokenFromHeader(r)
+	if err != nil {
+		return "", fmt.Errorf("error getting token from header: %v", err)
+	}
+
 	dbRefreshToken, err := a.queries.GetTokenDetail(context, refreshToken)
 	if err != nil {
 		return "", fmt.Errorf("error getting refresh token info in database, error: %v", err)
@@ -98,10 +103,28 @@ func (a *AuthService) RevokeRefreshToken(context context.Context, refreshToken s
 	return nil
 }
 
-func ExtractTokenFromHeader(r *http.Request) string {
+// ExtractTokenFromHeader extracts the Bearer token from the Authorization header of the request.
+// It returns the token string and an error, if any.
+func ExtractTokenFromHeader(r *http.Request) (string, error) {
+	// Get the Authorization header
 	reqToken := r.Header.Get("Authorization")
+	if reqToken == "" {
+		return "", errors.New("authorization header missing")
+	}
+
+	// Split the token to separate the "Bearer " part
 	splitToken := strings.Split(reqToken, "Bearer ")
-	return splitToken[1]
+	if len(splitToken) != 2 {
+		return "", errors.New("invalid authorization header format")
+	}
+
+	// Return the token part
+	token := splitToken[1]
+	if token == "" {
+		return "", errors.New("token missing after Bearer")
+	}
+
+	return token, nil
 }
 
 func ValidateTokenAndExtractId(tokenString string) (string, error) {
