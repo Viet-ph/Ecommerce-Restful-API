@@ -26,6 +26,8 @@ func main() {
 		log.Fatal("Error conenction to database.")
 	}
 
+	log.Print("Database connected.")
+
 	userService := service.NewUserService(queries)
 	authService := service.NewAuthService(userService, queries)
 	userHandler := handler.NewUserHandler(userService)

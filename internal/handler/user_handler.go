@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/dto"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/helper"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/middleware"
-	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/service"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -30,6 +30,7 @@ func (u *UserHandler) UserSignUp() http.HandlerFunc {
 		Location string `json:"location"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Print("Hit Sign Up endpoint.")
 		req, err := helper.Decode[request](r)
 		if err != nil {
 			log.Printf("Error decoding parameters: %s", err)
@@ -55,7 +56,7 @@ func (u *UserHandler) GetPersonalInfo() http.HandlerFunc {
 			return
 		}
 
-		helper.RespondWithJSON(w, http.StatusOK, model.DbUsertoUser(&user))
+		helper.RespondWithJSON(w, http.StatusOK, dto.DbUsertoDto(&user))
 	}
 }
 

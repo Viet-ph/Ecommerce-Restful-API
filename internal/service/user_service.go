@@ -6,7 +6,6 @@ import (
 	"time"
 
 	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
-	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,16 +20,16 @@ func NewUserService(q *db.Queries) *UserService {
 	}
 }
 
-func (userService *UserService) Create(ctx context.Context, loc, email, password, username string) (model.User, error) {
+func (userService *UserService) Create(ctx context.Context, loc, email, password, username string) (db.User, error) {
 	if exist, err := userService.UserExists(ctx, email); err != nil {
-		return model.User{}, fmt.Errorf("error checking if user email are already used")
+		return db.User{}, fmt.Errorf("error checking if user email are already used")
 	} else if exist {
-		return model.User{}, fmt.Errorf("this email is already used")
+		return db.User{}, fmt.Errorf("this email is already used")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return model.User{}, fmt.Errorf("error creating new user credential")
+		return db.User{}, fmt.Errorf("error creating new user credential")
 	}
 
 	user, err := userService.queries.CreateUser(ctx, db.CreateUserParams{
@@ -44,10 +43,10 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 	})
 
 	if err != nil {
-		return model.User{}, err
+		return db.User{}, err
 	}
 
-	return model.DbUsertoUser(&user), nil
+	return user, nil
 }
 
 func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (db.User, error) {

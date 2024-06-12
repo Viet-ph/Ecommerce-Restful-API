@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Viet-ph/Furniture-Store-Server/internal/dto"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/helper"
-	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
 	"github.com/Viet-ph/Furniture-Store-Server/internal/service"
 )
 
@@ -28,7 +28,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	}
 
 	type response struct {
-		model.User
+		dto.User
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -48,7 +48,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 		}
 
 		helper.RespondWithJSON(w, http.StatusOK, response{
-			User:         user,
+			User:         dto.DbUsertoDto(&user),
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		})

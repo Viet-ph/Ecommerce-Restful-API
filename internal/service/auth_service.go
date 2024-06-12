@@ -11,7 +11,6 @@ import (
 	"time"
 
 	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
-	"github.com/Viet-ph/Furniture-Store-Server/internal/model"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -32,28 +31,28 @@ func NewAuthService(userSv *UserService, q *db.Queries) *AuthService {
 	}
 }
 
-func (a *AuthService) Login(context context.Context, email, password string) (user model.User, signedAccessToken, signedRefreshToken string, err error) {
+func (a *AuthService) Login(context context.Context, email, password string) (user db.User, signedAccessToken, signedRefreshToken string, err error) {
 	dbUser, err := a.userService.GetUserByEmail(context, email)
 	if err == sql.ErrNoRows {
-		return model.User{}, "", "", fmt.Errorf("wrong email")
+		return db.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
-		return model.User{}, "", "", err
+		return db.User{}, "", "", err
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)); err != nil {
-		return model.User{}, "", "", errors.New("wrong password")
+		return db.User{}, "", "", errors.New("wrong password")
 	}
 
 	signedAccessToken, err = signAccessToken(user.ID.String(), ACCESS_TOKEN_LIFETIME)
 	if err != nil {
-		return model.User{}, "", "", err
+		return db.User{}, "", "", err
 	}
 
 	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, user.ID)
 	if err == sql.ErrNoRows {
 		signedRefreshToken, err = signRefreshToken(user.ID.String(), REFRESH_TOKEN_LIFETIME)
 		if err != nil {
-			return model.User{}, "", "", err
+			return db.User{}, "", "", err
 		}
 
 		_, err = a.queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
@@ -64,13 +63,13 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 			CreatedAt: time.Now().UTC(),
 		})
 		if err != nil {
-			return model.User{}, "", "", err
+			return db.User{}, "", "", err
 		}
 	} else {
 		signedRefreshToken = dbRefreshToken.Token
 	}
 
-	return model.DbUsertoUser(&dbUser), signedAccessToken, signedRefreshToken, nil
+	return dbUser, signedAccessToken, signedRefreshToken, nil
 }
 
 func (a *AuthService) RefreshAccessToken(context context.Context, refreshToken string) (string, error) {
