@@ -16,10 +16,10 @@ func addRoutes(
 ) {
 	//Protected routes
 	middlewareAuth := middleware.NewMiddlewareAuth(userService)
-	mux.Handle("GET /api/v1/users", middlewareAuth(userHandler.GetPersonalInfo()))
+	mux.Handle("GET /api/v1/users/profile", middlewareAuth(userHandler.GetPersonalInfo()))
 	mux.Handle("PUT /api/v1/users/password", middlewareAuth(userHandler.ChangePassword()))
 
-	//Unrotected routes
+	//Unprotected routes
 	mux.HandleFunc("GET /api/v1/healthz", handler.Readiness)
 	mux.HandleFunc("POST /api/v1/users", userHandler.UserSignUp())
 	mux.HandleFunc("POST /api/v1/login", authHandler.UserLogin())

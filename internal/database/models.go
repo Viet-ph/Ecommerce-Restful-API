@@ -10,6 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type Product struct {
+	ID              uuid.UUID
+	Title           string
+	Supplier        string
+	Category        string
+	Price           string
+	ImageUrl        string
+	Description     string
+	ProductLocation string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 type RefreshToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID

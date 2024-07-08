@@ -147,7 +147,7 @@ func ValidateTokenAndExtractId(tokenString string) (string, error) {
 }
 
 func signAccessToken(userId string, lifetime time.Duration) (singedToken string, err error) {
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt	.RegisteredClaims{
 		Issuer:    "Furniture-access",
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(lifetime)),
