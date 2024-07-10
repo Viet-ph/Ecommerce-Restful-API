@@ -6,6 +6,7 @@ import (
 	"time"
 
 	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/dto"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,16 +21,16 @@ func NewUserService(q *db.Queries) *UserService {
 	}
 }
 
-func (userService *UserService) Create(ctx context.Context, loc, email, password, username string) (db.User, error) {
+func (userService *UserService) Create(ctx context.Context, loc, email, password, username string) (dto.User, error) {
 	if exist, err := userService.UserExists(ctx, email); err != nil {
-		return db.User{}, fmt.Errorf("error checking if user email are already used")
+		return dto.User{}, fmt.Errorf("error checking if user email are already used")
 	} else if exist {
-		return db.User{}, fmt.Errorf("this email is already used")
+		return dto.User{}, fmt.Errorf("this email is already used")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return db.User{}, fmt.Errorf("error creating new user credential")
+		return dto.User{}, fmt.Errorf("error creating new user credential")
 	}
 
 	user, err := userService.queries.CreateUser(ctx, db.CreateUserParams{
@@ -43,10 +44,10 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 	})
 
 	if err != nil {
-		return db.User{}, err
+		return dto.User{}, err
 	}
 
-	return user, nil
+	return dto.DbUsertoDto(&user), nil
 }
 
 func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (db.User, error) {
@@ -58,13 +59,13 @@ func (userService *UserService) GetUserById(ctx context.Context, id uuid.UUID) (
 	return user, nil
 }
 
-func (userService *UserService) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
+func (userService *UserService) GetUserByEmail(ctx context.Context, email string) (dto.User, error) {
 	user, err := userService.queries.GetUserByEmail(ctx, email)
 	if err != nil {
-		return db.User{}, err
+		return dto.User{}, err
 	}
 
-	return user, nil
+	return dto.DbUsertoDto(&user), nil
 }
 
 func (userService *UserService) DeleteUserById(ctx context.Context, id uuid.UUID) error {

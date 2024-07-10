@@ -94,3 +94,21 @@ func (u *UserHandler) ChangePassword() http.HandlerFunc {
 		helper.RespondWithJSON(w, http.StatusOK, "Password change successfully!")
 	}
 }
+
+func (u *UserHandler) DeleteAccount() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := r.Context().Value(middleware.ContextUserKey).(db.User)
+		if !ok {
+			helper.RespondWithError(w, http.StatusInternalServerError, "Context value is not User type")
+			return
+		}
+
+		err := u.DeleteUserById(r.Context(), user.ID)
+		if err != nil {
+			helper.RespondWithError(w, http.StatusInternalServerError, "Couldn't delete account with given user id: "+user.ID.String())
+			return
+		}
+
+		helper.RespondWithJSON(w, http.StatusOK, "User with id: "+user.ID.String()+" deleted successfully.")
+	}
+}

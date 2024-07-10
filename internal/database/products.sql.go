@@ -101,23 +101,42 @@ func (q *Queries) GetProductById(ctx context.Context, id uuid.UUID) (Product, er
 	return i, err
 }
 
-const listProducts = `-- name: ListProducts :many
+const listProductsWithFilter = `-- name: ListProductsWithFilter :many
 SELECT id, title, supplier, category, price, image_url, description, product_location, created_at, updated_at
 FROM products
 WHERE 
     ($1::TEXT IS NULL OR supplier = $1) AND
     ($2::TEXT IS NULL OR category = $2) AND
     ($3::TEXT IS NULL OR product_location = $3)
+ORDER BY 
+    CASE 
+        WHEN $4::TEXT IS NULL 
+            OR $4::TEXT = 'latest' THEN created_at  
+        ELSE NULL
+    END DESC,
+    CASE 
+        WHEN $4::TEXT = 'oldest' THEN created_at
+        ELSE NULL 
+    END ASC 
+LIMIT COALESCE($5::INT, 100)
 `
 
-type ListProductsParams struct {
+type ListProductsWithFilterParams struct {
 	Supplier        sql.NullString
 	Category        sql.NullString
 	ProductLocation sql.NullString
+	OrderBy         sql.NullString
+	Lim             sql.NullInt32
 }
 
-func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error) {
-	rows, err := q.db.QueryContext(ctx, listProducts, arg.Supplier, arg.Category, arg.ProductLocation)
+func (q *Queries) ListProductsWithFilter(ctx context.Context, arg ListProductsWithFilterParams) ([]Product, error) {
+	rows, err := q.db.QueryContext(ctx, listProductsWithFilter,
+		arg.Supplier,
+		arg.Category,
+		arg.ProductLocation,
+		arg.OrderBy,
+		arg.Lim,
+	)
 	if err != nil {
 		return nil, err
 	}

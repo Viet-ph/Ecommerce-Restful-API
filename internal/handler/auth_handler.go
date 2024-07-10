@@ -11,13 +11,11 @@ import (
 
 type AuthHandler struct {
 	*service.AuthService
-	*service.UserService
 }
 
-func NewAuthHandler(a *service.AuthService, u *service.UserService) *AuthHandler {
+func NewAuthHandler(a *service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		AuthService: a,
-		UserService: u,
 	}
 }
 
@@ -34,7 +32,6 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Print("Login endpoint hit")
 		req, err := helper.Decode[request](r)
 		if err != nil {
 			log.Printf("Error decoding parameters: %s", err)
@@ -49,7 +46,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 		}
 
 		helper.RespondWithJSON(w, http.StatusOK, response{
-			User:         dto.DbUsertoDto(&user),
+			User:         user,
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
 		})

@@ -11,48 +11,47 @@ import (
 	"time"
 
 	db "github.com/Viet-ph/Furniture-Store-Server/internal/database"
+	"github.com/Viet-ph/Furniture-Store-Server/internal/dto"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	userService *UserService
-	queries     *db.Queries
+	queries *db.Queries
 }
 
 const ACCESS_TOKEN_LIFETIME = 30 * time.Minute
 const REFRESH_TOKEN_LIFETIME = 24 * 60 * time.Hour
 
-func NewAuthService(userSv *UserService, q *db.Queries) *AuthService {
+func NewAuthService(q *db.Queries) *AuthService {
 	return &AuthService{
-		userService: userSv,
-		queries:     q,
+		queries: q,
 	}
 }
 
-func (a *AuthService) Login(context context.Context, email, password string) (dbUser db.User, signedAccessToken, signedRefreshToken string, err error) {
-	dbUser, err = a.userService.GetUserByEmail(context, email)
+func (a *AuthService) Login(context context.Context, email, password string) (user dto.User, signedAccessToken, signedRefreshToken string, err error) {
+	dbUser, err := a.queries.GetUserByEmail(context, email)
 	if err == sql.ErrNoRows {
-		return db.User{}, "", "", fmt.Errorf("wrong email")
+		return dto.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
-		return db.User{}, "", "", err
+		return dto.User{}, "", "", err
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)); err != nil {
-		return db.User{}, "", "", errors.New("wrong password")
+		return dto.User{}, "", "", errors.New("wrong password")
 	}
 
 	signedAccessToken, err = signAccessToken(dbUser.ID.String(), ACCESS_TOKEN_LIFETIME)
 	if err != nil {
-		return db.User{}, "", "", err
+		return dto.User{}, "", "", err
 	}
 
 	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, dbUser.ID)
 	if err == sql.ErrNoRows {
 		signedRefreshToken, err = signRefreshToken(dbUser.ID.String(), REFRESH_TOKEN_LIFETIME)
 		if err != nil {
-			return db.User{}, "", "", err
+			return dto.User{}, "", "", err
 		}
 
 		_, err = a.queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
@@ -63,13 +62,13 @@ func (a *AuthService) Login(context context.Context, email, password string) (db
 			CreatedAt: time.Now().UTC(),
 		})
 		if err != nil {
-			return db.User{}, "", "", err
+			return dto.User{}, "", "", err
 		}
 	} else {
 		signedRefreshToken = dbRefreshToken.Token
 	}
 
-	return dbUser, signedAccessToken, signedRefreshToken, nil
+	return dto.DbUsertoDto(&dbUser), signedAccessToken, signedRefreshToken, nil
 }
 
 func (a *AuthService) RefreshAccessToken(context context.Context, r *http.Request) (string, error) {
@@ -147,7 +146,7 @@ func ValidateTokenAndExtractId(tokenString string) (string, error) {
 }
 
 func signAccessToken(userId string, lifetime time.Duration) (singedToken string, err error) {
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt	.RegisteredClaims{
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    "Furniture-access",
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(lifetime)),

@@ -20,7 +20,7 @@ type Product struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-func DbProductToProduct(dbProduct *db.Product) Product {
+func DbProductToDto(dbProduct *db.Product) Product {
 	return Product{
 		ID:              dbProduct.ID,
 		Title:           dbProduct.Title,
