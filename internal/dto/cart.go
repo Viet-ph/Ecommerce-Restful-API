@@ -35,7 +35,6 @@ func DbCartToDto(dbCart *db.Cart) Cart {
 
 func DbCartItemToDto(dbCartItem *db.CartItem) CartItem {
 	return CartItem{
-		ID:          dbCartItem.ID,
 		CartID:      dbCartItem.CartID,
 		ProductID:   dbCartItem.ProductID,
 		Quantity:    dbCartItem.Quantity,

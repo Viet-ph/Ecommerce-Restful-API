@@ -18,7 +18,6 @@ type Cart struct {
 }
 
 type CartItem struct {
-	ID          uuid.UUID
 	CartID      uuid.UUID
 	ProductID   uuid.UUID
 	Quantity    int32

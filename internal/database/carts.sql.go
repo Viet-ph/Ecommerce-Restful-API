@@ -13,13 +13,12 @@ import (
 )
 
 const addNewItemToCart = `-- name: AddNewItemToCart :one
-INSERT INTO cart_items (id, cart_id, product_id, quantity, price_at_time, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, cart_id, product_id, quantity, price_at_time, created_at, updated_at
+INSERT INTO cart_items (cart_id, product_id, quantity, price_at_time, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING cart_id, product_id, quantity, price_at_time, created_at, updated_at
 `
 
 type AddNewItemToCartParams struct {
-	ID          uuid.UUID
 	CartID      uuid.UUID
 	ProductID   uuid.UUID
 	Quantity    int32
@@ -30,7 +29,6 @@ type AddNewItemToCartParams struct {
 
 func (q *Queries) AddNewItemToCart(ctx context.Context, arg AddNewItemToCartParams) (CartItem, error) {
 	row := q.db.QueryRowContext(ctx, addNewItemToCart,
-		arg.ID,
 		arg.CartID,
 		arg.ProductID,
 		arg.Quantity,
@@ -40,7 +38,6 @@ func (q *Queries) AddNewItemToCart(ctx context.Context, arg AddNewItemToCartPara
 	)
 	var i CartItem
 	err := row.Scan(
-		&i.ID,
 		&i.CartID,
 		&i.ProductID,
 		&i.Quantity,
@@ -81,16 +78,46 @@ func (q *Queries) CreateCartForUser(ctx context.Context, arg CreateCartForUserPa
 	return i, err
 }
 
+const deleteAllItemsInCart = `-- name: DeleteAllItemsInCart :exec
+DELETE FROM cart_items
+WHERE cart_id = (
+    SELECT cart_id
+    FROM carts
+    WHERE user_id = $1
+)
+`
+
+func (q *Queries) DeleteAllItemsInCart(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteAllItemsInCart, userID)
+	return err
+}
+
+const deleteItemInCart = `-- name: DeleteItemInCart :exec
+DELETE FROM cart_items
+WHERE cart_id = $1 AND product_id = $2
+`
+
+type DeleteItemInCartParams struct {
+	CartID    uuid.UUID
+	ProductID uuid.UUID
+}
+
+func (q *Queries) DeleteItemInCart(ctx context.Context, arg DeleteItemInCartParams) error {
+	_, err := q.db.ExecContext(ctx, deleteItemInCart, arg.CartID, arg.ProductID)
+	return err
+}
+
 const getAllItemsInCart = `-- name: GetAllItemsInCart :many
-SELECT ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at, p.id, p.title, p.supplier, p.category, p.price, p.image_url, p.description, p.product_location, p.created_at, p.updated_at
+SELECT ci.cart_id, ci.product_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at, p.id, p.title, p.supplier, p.category, p.price, p.image_url, p.description, p.product_location, p.created_at, p.updated_at, ci.quantity * ci.price_at_time AS item_total_cost
 FROM cart_items ci
 JOIN products p ON ci.product_id = p.id
 WHERE ci.cart_id = $1
 `
 
 type GetAllItemsInCartRow struct {
-	CartItem CartItem
-	Product  Product
+	CartItem      CartItem
+	Product       Product
+	ItemTotalCost int32
 }
 
 func (q *Queries) GetAllItemsInCart(ctx context.Context, cartID uuid.UUID) ([]GetAllItemsInCartRow, error) {
@@ -103,7 +130,6 @@ func (q *Queries) GetAllItemsInCart(ctx context.Context, cartID uuid.UUID) ([]Ge
 	for rows.Next() {
 		var i GetAllItemsInCartRow
 		if err := rows.Scan(
-			&i.CartItem.ID,
 			&i.CartItem.CartID,
 			&i.CartItem.ProductID,
 			&i.CartItem.Quantity,
@@ -120,6 +146,7 @@ func (q *Queries) GetAllItemsInCart(ctx context.Context, cartID uuid.UUID) ([]Ge
 			&i.Product.ProductLocation,
 			&i.Product.CreatedAt,
 			&i.Product.UpdatedAt,
+			&i.ItemTotalCost,
 		); err != nil {
 			return nil, err
 		}
@@ -134,28 +161,28 @@ func (q *Queries) GetAllItemsInCart(ctx context.Context, cartID uuid.UUID) ([]Ge
 	return items, nil
 }
 
-const getCartValueByUserId = `-- name: GetCartValueByUserId :many
+const getCartValueOfAllUsers = `-- name: GetCartValueOfAllUsers :many
 SELECT c.user_id, SUM(ci.quantity * ci.price_at_time) AS total_cart_value
 FROM carts c
 JOIN cart_items ci ON c.id = ci.cart_id
-WHERE c.user_id = $1
 GROUP BY c.user_id
+ORDER BY total_cart_value
 `
 
-type GetCartValueByUserIdRow struct {
+type GetCartValueOfAllUsersRow struct {
 	UserID         uuid.UUID
 	TotalCartValue int64
 }
 
-func (q *Queries) GetCartValueByUserId(ctx context.Context, userID uuid.UUID) ([]GetCartValueByUserIdRow, error) {
-	rows, err := q.db.QueryContext(ctx, getCartValueByUserId, userID)
+func (q *Queries) GetCartValueOfAllUsers(ctx context.Context) ([]GetCartValueOfAllUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCartValueOfAllUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCartValueByUserIdRow
+	var items []GetCartValueOfAllUsersRow
 	for rows.Next() {
-		var i GetCartValueByUserIdRow
+		var i GetCartValueOfAllUsersRow
 		if err := rows.Scan(&i.UserID, &i.TotalCartValue); err != nil {
 			return nil, err
 		}
@@ -170,18 +197,74 @@ func (q *Queries) GetCartValueByUserId(ctx context.Context, userID uuid.UUID) ([
 	return items, nil
 }
 
-const updateItemQuantity = `-- name: UpdateItemQuantity :exec
-UPDATE cart_items
-SET quantity = $1 
-WHERE id = $2
+const getItemInCart = `-- name: GetItemInCart :many
+SELECT ci.cart_id, ci.product_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at, ci.quantity * ci.price_at_time AS item_total_cost
+FROM cart_items ci
+WHERE ci.cart_id = $1 AND ci.product_id = $2
 `
 
-type UpdateItemQuantityParams struct {
-	Quantity int32
-	ID       uuid.UUID
+type GetItemInCartParams struct {
+	CartID    uuid.UUID
+	ProductID uuid.UUID
 }
 
-func (q *Queries) UpdateItemQuantity(ctx context.Context, arg UpdateItemQuantityParams) error {
-	_, err := q.db.ExecContext(ctx, updateItemQuantity, arg.Quantity, arg.ID)
+type GetItemInCartRow struct {
+	CartItem      CartItem
+	ItemTotalCost int32
+}
+
+func (q *Queries) GetItemInCart(ctx context.Context, arg GetItemInCartParams) ([]GetItemInCartRow, error) {
+	rows, err := q.db.QueryContext(ctx, getItemInCart, arg.CartID, arg.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemInCartRow
+	for rows.Next() {
+		var i GetItemInCartRow
+		if err := rows.Scan(
+			&i.CartItem.CartID,
+			&i.CartItem.ProductID,
+			&i.CartItem.Quantity,
+			&i.CartItem.PriceAtTime,
+			&i.CartItem.CreatedAt,
+			&i.CartItem.UpdatedAt,
+			&i.ItemTotalCost,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCartItem = `-- name: UpdateCartItem :exec
+UPDATE cart_items
+    SET quantity = $3,
+        updated_at = NOW(),
+        price_at_time = $4 
+WHERE cart_id = $1 AND product_id = $2
+`
+
+type UpdateCartItemParams struct {
+	CartID      uuid.UUID
+	ProductID   uuid.UUID
+	Quantity    int32
+	PriceAtTime string
+}
+
+func (q *Queries) UpdateCartItem(ctx context.Context, arg UpdateCartItemParams) error {
+	_, err := q.db.ExecContext(ctx, updateCartItem,
+		arg.CartID,
+		arg.ProductID,
+		arg.Quantity,
+		arg.PriceAtTime,
+	)
 	return err
 }

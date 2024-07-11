@@ -4,27 +4,50 @@ VALUES ($1, $2, $3, $4)
 RETURNING *; 
 
 -- name: AddNewItemToCart :one
-INSERT INTO cart_items (id, cart_id, product_id, quantity, price_at_time, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO cart_items (cart_id, product_id, quantity, price_at_time, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *; 
 
 -- name: GetAllItemsInCart :many
-SELECT sqlc.embed(ci), sqlc.embed(p)
+SELECT sqlc.embed(ci), sqlc.embed(p), ci.quantity * ci.price_at_time AS item_total_cost
 FROM cart_items ci
 JOIN products p ON ci.product_id = p.id
 WHERE ci.cart_id = $1;
 
--- name: UpdateItemQuantity :exec
-UPDATE cart_items
-SET quantity = $1 
-WHERE id = $2;
+-- name: GetItemInCart :many
+SELECT sqlc.embed(ci), ci.quantity * ci.price_at_time AS item_total_cost
+FROM cart_items ci
+WHERE ci.cart_id = $1 AND ci.product_id = $2;
 
--- name: GetCartValueByUserId :many
+-- name: UpdateCartItem :exec
+UPDATE cart_items
+    SET quantity = $3,
+        updated_at = NOW(),
+        price_at_time = $4 
+WHERE cart_id = $1 AND product_id = $2;
+
+-- name: GetCartValueOfAllUsers :many
 SELECT c.user_id, SUM(ci.quantity * ci.price_at_time) AS total_cart_value
 FROM carts c
 JOIN cart_items ci ON c.id = ci.cart_id
-WHERE c.user_id = $1
-GROUP BY c.user_id;
+GROUP BY c.user_id
+ORDER BY total_cart_value;
+
+-- name: DeleteAllItemsInCart :exec
+DELETE FROM cart_items
+WHERE cart_id = (
+    SELECT cart_id
+    FROM carts
+    WHERE user_id = $1
+);
+
+-- name: DeleteItemInCart :exec
+DELETE FROM cart_items
+WHERE cart_id = $1 AND product_id = $2;
+
+
+
+
 
 
 
