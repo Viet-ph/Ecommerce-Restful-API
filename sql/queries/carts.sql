@@ -14,9 +14,10 @@ FROM cart_items ci
 JOIN products p ON ci.product_id = p.id
 WHERE ci.cart_id = $1;
 
--- name: GetItemInCart :many
-SELECT sqlc.embed(ci), ci.quantity * ci.price_at_time AS item_total_cost
+-- name: GetItemInCart :one
+SELECT sqlc.embed(ci), sqlc.embed(p) 
 FROM cart_items ci
+JOIN products p ON ci.product_id = p.id
 WHERE ci.cart_id = $1 AND ci.product_id = $2;
 
 -- name: UpdateCartItem :exec

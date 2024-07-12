@@ -45,7 +45,7 @@ func (productService *ProductService) Create(
 		UpdatedAt:       time.Now().UTC(),
 	})
 	if err != nil {
-		return dto.Product{}, err
+		return dto.Product{}, fmt.Errorf("unable to create new product: %v", err)
 	}
 
 	return dto.DbProductToDto(&product), nil
@@ -54,7 +54,7 @@ func (productService *ProductService) Create(
 func (productService *ProductService) GetProductById(ctx context.Context, id uuid.UUID) (dto.Product, error) {
 	product, err := productService.queries.GetProductById(ctx, id)
 	if err != nil {
-		return dto.Product{}, err
+		return dto.Product{}, fmt.Errorf("unable to get product: %v", err)
 	}
 
 	return dto.DbProductToDto(&product), nil
@@ -90,7 +90,7 @@ func (productService *ProductService) ListProductsWithFilter(ctx context.Context
 	}
 	dbProducts, err := productService.queries.ListProductsWithFilter(ctx, filterParams)
 	if err != nil {
-		return []dto.Product{}, err
+		return []dto.Product{}, fmt.Errorf("unable to get products with filter: %v", err)
 	}
 
 	products := make([]dto.Product, 0, len(dbProducts))
@@ -104,7 +104,7 @@ func (productService *ProductService) ListProductsWithFilter(ctx context.Context
 func (productService *ProductService) DeleteProductById(ctx context.Context, id uuid.UUID) error {
 	err := productService.queries.DeleteProductById(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to delete product: %v", err)
 	}
 
 	return nil

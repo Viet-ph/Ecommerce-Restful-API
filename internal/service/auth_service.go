@@ -35,7 +35,7 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 	if err == sql.ErrNoRows {
 		return dto.User{}, "", "", fmt.Errorf("wrong email")
 	} else if err != nil {
-		return dto.User{}, "", "", err
+		return dto.User{}, "", "", fmt.Errorf("unable to get user by email: %v", err)
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(password)); err != nil {
@@ -44,14 +44,14 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 
 	signedAccessToken, err = signAccessToken(dbUser.ID.String(), ACCESS_TOKEN_LIFETIME)
 	if err != nil {
-		return dto.User{}, "", "", err
+		return dto.User{}, "", "", fmt.Errorf("unable to sign access token: %v", err)
 	}
 
 	dbRefreshToken, err := a.queries.GetValidTokenByUserId(context, dbUser.ID)
 	if err == sql.ErrNoRows {
 		signedRefreshToken, err = signRefreshToken(dbUser.ID.String(), REFRESH_TOKEN_LIFETIME)
 		if err != nil {
-			return dto.User{}, "", "", err
+			return dto.User{}, "", "", fmt.Errorf("unable to sign refresh token: %v", err)
 		}
 
 		_, err = a.queries.SaveTokenToDB(context, db.SaveTokenToDBParams{
@@ -62,7 +62,7 @@ func (a *AuthService) Login(context context.Context, email, password string) (us
 			CreatedAt: time.Now().UTC(),
 		})
 		if err != nil {
-			return dto.User{}, "", "", err
+			return dto.User{}, "", "", fmt.Errorf("unable to save refresh token to database: %v", err)
 		}
 	} else {
 		signedRefreshToken = dbRefreshToken.Token
@@ -96,7 +96,7 @@ func (a *AuthService) RefreshAccessToken(context context.Context, r *http.Reques
 
 func (a *AuthService) RevokeRefreshToken(context context.Context, refreshToken string) error {
 	if err := a.queries.RevokeToken(context, refreshToken); err != nil {
-		return err
+		return fmt.Errorf("unable to revoke refresh token: %v", err)
 	}
 
 	return nil

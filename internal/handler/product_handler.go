@@ -73,7 +73,8 @@ func (p *ProductHandler) GetProductDetail() http.HandlerFunc {
 
 		product, err := p.GetProductById(r.Context(), parsedId)
 		if err != nil {
-			helper.RespondWithError(w, http.StatusNotFound, "Couldn't find product with given id: "+productId)
+			helper.RespondWithError(w, http.StatusNotFound,
+				 "Couldn't find product with given id: "+productId+" error message: "+err.Error())
 			return
 		}
 
@@ -110,7 +111,8 @@ func (p *ProductHandler) DeleteProduct() http.HandlerFunc {
 
 		err = p.DeleteProductById(r.Context(), parsedId)
 		if err != nil {
-			helper.RespondWithError(w, http.StatusInternalServerError, "Couldn't delete product with given id: "+productId)
+			helper.RespondWithError(w, http.StatusInternalServerError, 
+				"Couldn't delete product with given id: "+productId+" error message: "+err.Error())
 			return
 		}
 

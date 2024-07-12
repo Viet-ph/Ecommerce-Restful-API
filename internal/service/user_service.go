@@ -42,7 +42,6 @@ func (userService *UserService) Create(ctx context.Context, loc, email, password
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	})
-
 	if err != nil {
 		return dto.User{}, err
 	}
@@ -88,7 +87,7 @@ func (userService *UserService) UpdateUserPassword(ctx context.Context, id uuid.
 		Password: string(hashedPassword),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to update new password, %v", err)
 	}
 
 	return nil
@@ -97,7 +96,7 @@ func (userService *UserService) UpdateUserPassword(ctx context.Context, id uuid.
 func (userService *UserService) UserExists(ctx context.Context, email string) (bool, error) {
 	exist, err := userService.queries.UserExists(ctx, email)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to check if user already created, %v", err)
 	}
 
 	return exist, nil

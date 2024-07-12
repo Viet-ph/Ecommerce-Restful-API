@@ -24,6 +24,12 @@ type CartItem struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type CartItemProductJoined struct {
+	Item          CartItem `json:"item"`
+	Product       Product  `json:"product"`
+	ItemTotalCost int32    `json:"item_total_cost"`
+}
+
 func DbCartToDto(dbCart *db.Cart) Cart {
 	return Cart{
 		ID:        dbCart.ID,

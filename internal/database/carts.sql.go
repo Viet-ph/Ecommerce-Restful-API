@@ -197,9 +197,10 @@ func (q *Queries) GetCartValueOfAllUsers(ctx context.Context) ([]GetCartValueOfA
 	return items, nil
 }
 
-const getItemInCart = `-- name: GetItemInCart :many
-SELECT ci.cart_id, ci.product_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at, ci.quantity * ci.price_at_time AS item_total_cost
+const getItemInCart = `-- name: GetItemInCart :one
+SELECT ci.cart_id, ci.product_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at, p.id, p.title, p.supplier, p.category, p.price, p.image_url, p.description, p.product_location, p.created_at, p.updated_at 
 FROM cart_items ci
+JOIN products p ON ci.product_id = p.id
 WHERE ci.cart_id = $1 AND ci.product_id = $2
 `
 
@@ -209,39 +210,32 @@ type GetItemInCartParams struct {
 }
 
 type GetItemInCartRow struct {
-	CartItem      CartItem
-	ItemTotalCost int32
+	CartItem CartItem
+	Product  Product
 }
 
-func (q *Queries) GetItemInCart(ctx context.Context, arg GetItemInCartParams) ([]GetItemInCartRow, error) {
-	rows, err := q.db.QueryContext(ctx, getItemInCart, arg.CartID, arg.ProductID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetItemInCartRow
-	for rows.Next() {
-		var i GetItemInCartRow
-		if err := rows.Scan(
-			&i.CartItem.CartID,
-			&i.CartItem.ProductID,
-			&i.CartItem.Quantity,
-			&i.CartItem.PriceAtTime,
-			&i.CartItem.CreatedAt,
-			&i.CartItem.UpdatedAt,
-			&i.ItemTotalCost,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetItemInCart(ctx context.Context, arg GetItemInCartParams) (GetItemInCartRow, error) {
+	row := q.db.QueryRowContext(ctx, getItemInCart, arg.CartID, arg.ProductID)
+	var i GetItemInCartRow
+	err := row.Scan(
+		&i.CartItem.CartID,
+		&i.CartItem.ProductID,
+		&i.CartItem.Quantity,
+		&i.CartItem.PriceAtTime,
+		&i.CartItem.CreatedAt,
+		&i.CartItem.UpdatedAt,
+		&i.Product.ID,
+		&i.Product.Title,
+		&i.Product.Supplier,
+		&i.Product.Category,
+		&i.Product.Price,
+		&i.Product.ImageUrl,
+		&i.Product.Description,
+		&i.Product.ProductLocation,
+		&i.Product.CreatedAt,
+		&i.Product.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateCartItem = `-- name: UpdateCartItem :exec
