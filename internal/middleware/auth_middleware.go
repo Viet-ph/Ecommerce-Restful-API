@@ -13,7 +13,7 @@ type ContextKey string
 
 const ContextUserKey ContextKey = "user"
 
-func NewMiddlewareAuth(userService *service.UserService) func(http.Handler) http.Handler {
+func NewAuthMiddleware(userService *service.UserService) func(http.Handler) http.Handler {
 	//This will take the dependencies and return a authentication middleware that accepts only a single handler.
 	//By doing this, will clean up the middleware function arguments and create closure to outter deps.
 	return func(handler http.Handler) http.Handler {
@@ -21,6 +21,7 @@ func NewMiddlewareAuth(userService *service.UserService) func(http.Handler) http
 			tokenString, err := service.ExtractTokenFromHeader(r)
 			if err != nil {
 				helper.RespondWithError(w, http.StatusUnauthorized, "Cannot get token from header: "+err.Error())
+				return
 			}
 
 			userId, err := service.ValidateTokenAndExtractId(tokenString)

@@ -161,6 +161,24 @@ func (q *Queries) GetAllItemsInCart(ctx context.Context, cartID uuid.UUID) ([]Ge
 	return items, nil
 }
 
+const getCartByUserId = `-- name: GetCartByUserId :one
+SELECT id, user_id, created_at, updated_at
+FROM carts
+WHERE carts.user_id = $1
+`
+
+func (q *Queries) GetCartByUserId(ctx context.Context, userID uuid.UUID) (Cart, error) {
+	row := q.db.QueryRowContext(ctx, getCartByUserId, userID)
+	var i Cart
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCartValueOfAllUsers = `-- name: GetCartValueOfAllUsers :many
 SELECT c.user_id, SUM(ci.quantity * ci.price_at_time) AS total_cart_value
 FROM carts c

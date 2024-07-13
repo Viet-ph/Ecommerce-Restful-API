@@ -28,19 +28,16 @@ func main() {
 
 	log.Print("Database connected.")
 
-	userService := service.NewUserService(queries)
-	authService := service.NewAuthService(queries)
-	productService := service.NewProductService(queries)
-	
-	userHandler := handler.NewUserHandler(userService)
-	authHandler := handler.NewAuthHandler(authService)
-	productHandler := handler.NewProductHandler(productService)
+	userHandler := handler.NewUserHandler(service.NewUserService(queries))
+	authHandler := handler.NewAuthHandler(service.NewAuthService(queries))
+	productHandler := handler.NewProductHandler(service.NewProductService(queries))
+	cartHandler := handler.NewCartHandler(service.NewCartService(queries))
 
 	srv := server.NewServer(
-		userService,
 		authHandler,
 		userHandler,
 		productHandler,
+		cartHandler,
 	)
 	server := &http.Server{
 		Addr:    ":" + port,

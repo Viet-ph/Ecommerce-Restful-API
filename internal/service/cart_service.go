@@ -36,6 +36,15 @@ func (cartService *CartService) CreateCart(ctx context.Context, userId uuid.UUID
 	return dto.DbCartToDto(&dbCart), nil
 }
 
+func (cartService *CartService) GetCartId(ctx context.Context, userId uuid.UUID) (db.Cart, error) {
+	dbCart, err := cartService.queries.GetCartByUserId(ctx, userId)
+	if err != nil {
+		return db.Cart{}, fmt.Errorf("unable to get cart with user ID: %v, error message: %v", userId.String(), err)
+	}
+
+	return dbCart, nil
+}
+
 func (cartService *CartService) AddNewItemToCart(ctx context.Context, productPrice string, quantity int32, cartId, productId uuid.UUID) (dto.CartItem, error) {
 	dbCartItem, err := cartService.queries.AddNewItemToCart(ctx, db.AddNewItemToCartParams{
 		CartID:      cartId,
@@ -127,8 +136,16 @@ func (cartService *CartService) ClearCart(ctx context.Context, userId uuid.UUID)
 	return nil
 }
 
-func (cartService *CartService) UpdateCart(ctx context.Context, cartId uuid.UUID, productIdAndQuantity map[uuid.UUID]int) error {
-	for productId, quantity := range productIdAndQuantity {
+func (cartService *CartService) UpdateCart(ctx context.Context, cartId uuid.UUID, productIdAndQuantityKV map[string]int) error {
+	productQuantityKV := make(map[uuid.UUID]int)
+	for k, v := range productIdAndQuantityKV {
+		productId, err := uuid.Parse(k)
+		if err != nil {
+			return fmt.Errorf("unable to parse product id: %v, error meaasge: %v", productId, err)
+		}
+		productQuantityKV[productId] = v
+	}
+	for productId, quantity := range productQuantityKV {
 		err := cartService.RemoveOrUpdateItem(ctx, quantity, cartId, productId)
 		if err != nil {
 			return fmt.Errorf("unable to update item: %v, error meaasge: %v", productId, err)

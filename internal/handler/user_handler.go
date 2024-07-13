@@ -13,12 +13,14 @@ import (
 )
 
 type UserHandler struct {
-	*service.UserService
+	UserService *service.UserService
+	cartService *service.CartService
 }
 
-func NewUserHandler(u *service.UserService) *UserHandler {
+func NewUserHandler(u *service.UserService, c *service.CartService) *UserHandler {
 	return &UserHandler{
 		UserService: u,
+		cartService: c,
 	}
 }
 
@@ -29,6 +31,12 @@ func (u *UserHandler) UserSignUp() http.HandlerFunc {
 		Username string `json:"username"`
 		Location string `json:"location"`
 	}
+
+	type response struct {
+		User dto.User `json:"user"`
+		Cart dto.Cart `json:"cart"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Print("Hit Sign Up endpoint.")
 		req, err := helper.Decode[request](r)
@@ -38,13 +46,22 @@ func (u *UserHandler) UserSignUp() http.HandlerFunc {
 			return
 		}
 
-		user, err := u.Create(r.Context(), req.Location, req.Email, req.Password, req.Username)
+		user, err := u.UserService.Create(r.Context(), req.Location, req.Email, req.Password, req.Username)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusInternalServerError, "Error creating new user: "+err.Error())
 			return
 		}
 
-		helper.RespondWithJSON(w, http.StatusCreated, user)
+		cart, err := u.cartService.CreateCart(r.Context(), user.ID)
+		if err != nil {
+			helper.RespondWithError(w, http.StatusInternalServerError, "Error creating cart for new user: "+err.Error())
+			return
+		}
+
+		helper.RespondWithJSON(w, http.StatusCreated, response{
+			User: user,
+			Cart: cart,
+		})
 	}
 }
 
@@ -103,7 +120,7 @@ func (u *UserHandler) DeleteAccount() http.HandlerFunc {
 			return
 		}
 
-		err := u.DeleteUserById(r.Context(), user.ID)
+		err := u.UserService.DeleteUserById(r.Context(), user.ID)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusInternalServerError, "Couldn't delete account with given user id: "+user.ID.String())
 			return

@@ -3,6 +3,11 @@ INSERT INTO carts (id, user_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4)
 RETURNING *; 
 
+-- name: GetCartByUserId :one
+SELECT *
+FROM carts
+WHERE carts.user_id = $1;
+
 -- name: AddNewItemToCart :one
 INSERT INTO cart_items (cart_id, product_id, quantity, price_at_time, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6)

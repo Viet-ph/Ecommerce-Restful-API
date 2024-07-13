@@ -10,12 +10,12 @@ import (
 )
 
 type AuthHandler struct {
-	*service.AuthService
+	authService *service.AuthService
 }
 
 func NewAuthHandler(a *service.AuthService) *AuthHandler {
 	return &AuthHandler{
-		AuthService: a,
+		authService: a,
 	}
 }
 
@@ -39,7 +39,7 @@ func (a *AuthHandler) UserLogin() http.HandlerFunc {
 			return
 		}
 
-		user, accessToken, refreshToken, err := a.Login(r.Context(), req.Email, req.Password)
+		user, accessToken, refreshToken, err := a.authService.Login(r.Context(), req.Email, req.Password)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
@@ -59,7 +59,7 @@ func (a *AuthHandler) RefreshAccessToken() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		newAccessToken, err := a.AuthService.RefreshAccessToken(r.Context(), r)
+		newAccessToken, err := a.authService.RefreshAccessToken(r.Context(), r)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
@@ -84,7 +84,7 @@ func (a *AuthHandler) RevokeRefreshToken() http.HandlerFunc {
 			return
 		}
 
-		err = a.AuthService.RevokeRefreshToken(r.Context(), req.RefreshToken)
+		err = a.authService.RevokeRefreshToken(r.Context(), req.RefreshToken)
 		if err != nil {
 			helper.RespondWithError(w, http.StatusUnauthorized, "Error revoking token: "+err.Error())
 		}
