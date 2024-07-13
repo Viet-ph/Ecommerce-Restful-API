@@ -28,10 +28,11 @@ func main() {
 
 	log.Print("Database connected.")
 
-	userHandler := handler.NewUserHandler(service.NewUserService(queries))
+	cartService := service.NewCartService(queries)
+	userHandler := handler.NewUserHandler(service.NewUserService(queries), cartService)
 	authHandler := handler.NewAuthHandler(service.NewAuthService(queries))
 	productHandler := handler.NewProductHandler(service.NewProductService(queries))
-	cartHandler := handler.NewCartHandler(service.NewCartService(queries))
+	cartHandler := handler.NewCartHandler(cartService)
 
 	srv := server.NewServer(
 		authHandler,
