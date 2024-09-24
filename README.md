@@ -34,5 +34,5 @@ Ensure you have the following installed:
 ### Clone the Repository
 
 ```bash
-$ git clone https://github.com/Viet-ph/Furniture-Store-Server.git
+$ git clone https://github.com/Viet-ph/Ecommerce-Restful-API
 $ cd Furniture-Store-Server
