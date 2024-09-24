@@ -17,7 +17,7 @@ func ConnectDatabase() (*database.Queries, error) {
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		return nil, err
-	}
+	}		
 	dbQueries := database.New(db)
 
 	return dbQueries, nil

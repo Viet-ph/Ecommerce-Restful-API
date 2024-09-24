@@ -8,10 +8,9 @@ import (
 )
 
 type User struct {
-	ID       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
-	//Password  string    `json:"password"`
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
 	Location  string    `json:"location"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -19,10 +18,9 @@ type User struct {
 
 func DbUsertoDto(dbUser *db.User) User {
 	return User{
-		ID:       dbUser.ID,
-		Username: dbUser.Username,
-		Email:    dbUser.Email,
-		//Password:  dbUser.Password,
+		ID:        dbUser.ID,
+		Username:  dbUser.Username,
+		Email:     dbUser.Email,
 		Location:  dbUser.Location,
 		CreatedAt: dbUser.CreatedAt,
 		UpdatedAt: dbUser.UpdatedAt,
