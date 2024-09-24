@@ -33,6 +33,27 @@ Ensure you have the following installed:
 
 ### Clone the Repository
 
-```bash
+```sh
 $ git clone https://github.com/Viet-ph/Ecommerce-Restful-API
 $ cd Furniture-Store-Server
+```
+
+**Environment Variables**:</br>
+Ensure that the necessary environment variables are set:
+```sh
+# Database Configuration
+DB_HOST            # Database host
+DB_PORT                # Database port (e.g., 5432 for PostgreSQL)
+DB_USER           # Database username
+DB_PASSWORD   # Database password
+DB_NAME      # Database name
+DB_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+
+# JWT Configuration
+JWT_SECRET    # Secret key used to sign JWT tokens
+
+# Server port
+PORT
+```
+
+
